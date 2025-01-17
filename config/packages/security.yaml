@@ -25,7 +25,7 @@ security:
                 password_parameter: password
             logout:
                 path: app_logout
-                target: app_login
+                target: homepage
 
             # activate different ways to authenticate
             # https://symfony.com/doc/current/security.html#the-firewall
@@ -36,7 +36,7 @@ security:
     # Easy way to control access for large sections of your site
     # Note: Only the *first* access control that matches will be used
     access_control:
-        - { path: ^/admin, roles: ROLE_ADMIN }
+        - { path: ^/admin, roles: ROLE_USER }
         - { path: ^/book, roles: ROLE_USER }
         # - { path: ^/profile, roles: ROLE_USER }
 

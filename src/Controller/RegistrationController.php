@@ -33,6 +33,12 @@ class RegistrationController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            // Set username based on email
+            $email = $form->get('email')->getData();
+            $username = strstr($email, '@', true); // Get part before @
+
+            $user->setUsername($username);
+
             // encode the plain password
             $user->setPassword(
                 $userPasswordHasher->hashPassword(
