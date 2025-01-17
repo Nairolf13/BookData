@@ -3,15 +3,17 @@
 namespace App\Controller;
 
 use App\Entity\Book;
+use App\GoogleBooks;
 use App\Form\BookType;
 use App\Repository\BookRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\String\Slugger\SluggerInterface;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
 
 #[Route('/book')]
@@ -131,5 +133,37 @@ final class BookController extends AbstractController
         }
 
         return $this->redirectToRoute('app_book_index');
+    }
+
+    public function __construct(private readonly GoogleBooks $googleBooks)
+    {
+    }
+
+ 
+
+    #[Route('/search-book-info', name: 'app_book_search_info', methods: ['GET'])]
+    public function searchBookInfo(Request $request, GoogleBooks $googleBooks, Security $security): JsonResponse
+    {
+        $query = $request->query->get('query', '');
+        
+        try {
+            $results = $googleBooks->searchBooks($query, 1);
+            
+            if (!empty($results['items'])) {
+                $book = $results['items'][0]['volumeInfo'];
+                $user = $security->getUser();
+                
+                return $this->json([
+                    'title' => $book['title'] ?? '',
+                    'author' => $book['authors'][0] ?? '',
+                    'publicationDate' => $book['publishedDate'] ?? '',
+                    'ISBN' => $book['industryIdentifiers'][0]['identifier'] ?? '',
+                ]);
+            }
+            
+            return $this->json(['error' => 'Aucun livre trouvé'], Response::HTTP_NOT_FOUND);
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'Erreur lors de la recherche'], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 }
