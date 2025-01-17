@@ -6,7 +6,8 @@ use App\Repository\BookRepository;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: BookRepository::class)]
-class Book
+#[ORM\HasLifecycleCallbacks]
+class Book implements \Stringable
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -28,7 +29,7 @@ class Book
     #[ORM\Column]
     private ?\DateTimeImmutable $createdAt = null;
 
-    #[ORM\Column]
+    #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $updateAt = null;
 
     #[ORM\Column(length: 255)]
@@ -37,9 +38,21 @@ class Book
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $photoFileName = null;
 
+    #[ORM\PrePersist]
+    public function setCreatedAtValue() : static
+    {
+        $this->createdAt = new \DateTimeImmutable();
+        return $this;
+    }
+
     public function getId(): ?int
     {
         return $this->id;
+    }
+
+    public function __toString(): string
+    {
+        return $this->author.' '.$this->title.' '.$this->ISBN; ' '.$this->buyBy;' '.$this->photoFileName;
     }
 
     public function getTitle(): ?string
