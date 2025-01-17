@@ -41,7 +41,7 @@
             <div class="mx-auto py-8">
                 <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {% for book in books %}
-                        <div class="bg-white rounded-lg shadow-lg overflow-hidden flex flex-col h-[32rem]">
+                        <div class="bg-white rounded-lg shadow-lg overflow-hidden flex flex-col h-[32rem] book-card cursor-pointer" data-book-id="{{ book.id }}">
                             {% if book.photoFileName %}
                                 <img class="h-64 w-full object-cover flex-shrink-0" src="{{ asset('uploads/photos/' ~ book.photoFileName) }}" alt="{{ book.title }}">
                             {% else %}
@@ -160,6 +160,25 @@
         </div>
     </div>
 
+    <div id="bookDetailsModal" class="fixed inset-0 z-50 overflow-y-auto hidden">
+        <div class="flex min-h-screen items-center justify-center p-4 text-center">
+            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+            
+            <div class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-4xl">
+                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 max-h-[80vh] overflow-y-auto">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-medium text-gray-900">Détails du Livre</h3>
+                        <button id="closeBookDetailsModal" class="text-gray-400 hover:text-gray-500">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div id="bookDetailsModalContent">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         function toggleForm() {
             const formContent = document.getElementById('bookForm');
@@ -222,6 +241,158 @@
             const inputs = form.querySelectorAll('input');
             inputs.forEach(input => {
                 input.value = '';
+            });
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const titleInput = document.getElementById('book_title');
+            const authorInput = document.getElementById('book_author');
+            const publicationDateInput = document.getElementById('book_publicationDate');
+            const isbnInput = document.getElementById('book_ISBN');
+            const buyByInput = document.getElementById('book_buyBy');
+            const clearFormBtn = document.getElementById('clearFormBtn');
+            const photoFileInput = document.getElementById('book_photoFileName');
+
+            // Pre-fill buyBy with current username if available
+            buyByInput.value = '{{ app.user ? app.user.username : '' }}';
+
+            // Clear form function
+            function clearForm() {
+                titleInput.value = '';
+                authorInput.value = '';
+                publicationDateInput.value = '';
+                isbnInput.value = '';
+                photoFileInput.value = '';
+            }
+
+            // Add event listener to clear button
+            clearFormBtn.addEventListener('click', clearForm);
+
+            function debounce(func, timeout = 1000) {
+                let timer;
+                return (...args) => {
+                    clearTimeout(timer);
+                    timer = setTimeout(() => { func.apply(this, args); }, timeout);
+                };
+            }
+
+            function searchBookInfo() {
+                const query = titleInput.value + ' ' + authorInput.value;
+                if (query.trim().length < 3) return;
+
+                fetch('{{ path('app_book_search_info') }}?query=' + encodeURIComponent(query))
+                    .then(response => response.json())
+                    .then(data => {
+                        if (!data.error) {
+                            if (data.title && !titleInput.value) {
+                                titleInput.value = data.title;
+                            }
+                            if (data.author && !authorInput.value) {
+                                authorInput.value = data.author;
+                            }
+                            if (data.publicationDate && !publicationDateInput.value) {
+                                publicationDateInput.value = data.publicationDate;
+                            }
+                            if (data.ISBN && !isbnInput.value) {
+                                isbnInput.value = data.ISBN;
+                            }
+                        }
+                    })
+                    .catch(error => console.error('Erreur:', error));
+            }
+
+            const debouncedSearchBookInfo = debounce(searchBookInfo);
+
+            titleInput.addEventListener('input', debouncedSearchBookInfo);
+            authorInput.addEventListener('input', debouncedSearchBookInfo);
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Ajout de l'événement de clic sur les cartes de livres
+            document.querySelectorAll('.book-card').forEach(card => {
+                card.addEventListener('click', function() {
+                    const bookId = this.dataset.bookId;
+                    
+                    // Récupérer les détails du livre
+                    fetch(`{{ path('app_book_modal_details', {'id': 'BOOK_ID'}) }}`.replace('BOOK_ID', bookId))
+                        .then(response => response.json())
+                        .then(data => {
+                            // Construction du HTML pour la modal
+                            const detailsHtml = `
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <!-- Image du livre -->
+                                    <div>
+                                        ${data.photoFileName 
+                                            ? `<img src="/uploads/photos/${data.photoFileName}" alt="${data.title}" class="w-full h-auto object-cover rounded-lg">` 
+                                            : `${data.imageLinks && data.imageLinks.thumbnail 
+                                                ? `<img src="${data.imageLinks.thumbnail}" alt="${data.title}" class="w-full h-auto object-cover rounded-lg">` 
+                                                : '<div class="bg-gray-200 h-64 flex items-center justify-center">Pas d\'image</div>'}`}
+                                    </div>
+
+                                    <!-- Détails du livre -->
+                                    <div class="col-span-2">
+                                        <h2 class="text-2xl font-bold mb-4">${data.title}</h2>
+                                        
+                                        <div class="space-y-2">
+                                            <p><strong>Auteur:</strong> ${data.author}</p>
+                                            <p><strong>Date de publication:</strong> ${data.publicationDate}</p>
+                                            <p><strong>ISBN:</strong> ${data.ISBN}</p>
+                                            <p><strong>Ajouté par:</strong> ${data.buyBy}</p>
+                                            
+                                            ${data.pageCount ? `<p><strong>Nombre de pages:</strong> ${data.pageCount}</p>` : ''}
+                                            ${data.categories ? `<p><strong>Catégories:</strong> ${data.categories.join(', ')}</p>` : ''}
+                                        </div>
+
+                                        <!-- Description -->
+                                        ${data.description ? `
+                                        <div class="mt-4">
+                                            <h3 class="text-lg font-semibold mb-2">Description</h3>
+                                            <p class="text-gray-600">${data.description}</p>
+                                        </div>` : ''}
+
+                                        <!-- Extrait de recherche -->
+                                        ${data.searchInfo ? `
+                                        <div class="mt-4">
+                                            <h3 class="text-lg font-semibold mb-2">Extrait</h3>
+                                            <p class="text-gray-600 italic">${data.searchInfo}</p>
+                                        </div>` : ''}
+                                    </div>
+                                </div>
+                            `;
+
+                            // Insertion des détails dans la modal
+                            const bookDetailsModalContent = document.getElementById('bookDetailsModalContent');
+                            bookDetailsModalContent.innerHTML = detailsHtml;
+                            
+                            // Afficher la modal
+                            const bookDetailsModal = document.getElementById('bookDetailsModal');
+                            bookDetailsModal.classList.remove('hidden');
+                        })
+                        .catch(error => {
+                            console.error('Erreur lors de la récupération des détails:', error);
+                            const bookDetailsModalContent = document.getElementById('bookDetailsModalContent');
+                            bookDetailsModalContent.innerHTML = '<p class="text-red-500">Impossible de charger les détails du livre</p>';
+                            const bookDetailsModal = document.getElementById('bookDetailsModal');
+                            bookDetailsModal.classList.remove('hidden');
+                        });
+                });
+            });
+
+            // Fermeture de la modal
+            const closeBookDetailsModal = document.getElementById('closeBookDetailsModal');
+            closeBookDetailsModal.addEventListener('click', function() {
+                const bookDetailsModal = document.getElementById('bookDetailsModal');
+                bookDetailsModal.classList.add('hidden');
+            });
+
+            // Fermeture de la modal en cliquant à l'extérieur
+            const bookDetailsModal = document.getElementById('bookDetailsModal');
+            bookDetailsModal.addEventListener('click', function(e) {
+                if (e.target === bookDetailsModal) {
+                    bookDetailsModal.classList.add('hidden');
+                }
             });
         });
     </script>

@@ -142,7 +142,7 @@ final class BookController extends AbstractController
  
 
     #[Route('/search-book-info', name: 'app_book_search_info', methods: ['GET'])]
-    public function searchBookInfo(Request $request, GoogleBooks $googleBooks, Security $security): JsonResponse
+    public function searchBookInfo(Request $request, GoogleBooks $googleBooks): JsonResponse
     {
         $query = $request->query->get('query', '');
         
@@ -151,19 +151,53 @@ final class BookController extends AbstractController
             
             if (!empty($results['items'])) {
                 $book = $results['items'][0]['volumeInfo'];
-                $user = $security->getUser();
                 
                 return $this->json([
                     'title' => $book['title'] ?? '',
                     'author' => $book['authors'][0] ?? '',
                     'publicationDate' => $book['publishedDate'] ?? '',
                     'ISBN' => $book['industryIdentifiers'][0]['identifier'] ?? '',
+                    'searchInfo' => $results['items'][0]['searchInfo']['textSnippet'] ?? null
                 ]);
             }
             
             return $this->json(['error' => 'Aucun livre trouvé'], Response::HTTP_NOT_FOUND);
         } catch (\Exception $e) {
             return $this->json(['error' => 'Erreur lors de la recherche'], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    #[Route('/book/{id}/modal-details', name: 'app_book_modal_details', methods: ['GET'])]
+    public function getBookModalDetails(Book $book, GoogleBooks $googleBooks): JsonResponse
+    {
+        try {
+            // Récupérer les informations du livre local
+            $details = [
+                'title' => $book->getTitle(),
+                'author' => $book->getAuthor(),
+                'publicationDate' => $book->getPublicationDate()->format('Y-m-d'),
+                'ISBN' => $book->getISBN(),
+                'buyBy' => $book->getBuyBy(),
+                'photoFileName' => $book->getPhotoFileName()
+            ];
+
+            // Rechercher des informations supplémentaires via l'API Google Books
+            $results = $googleBooks->searchBooks($book->getISBN(), 1);
+            
+            if (!empty($results['items'])) {
+                $volumeInfo = $results['items'][0]['volumeInfo'];
+                
+                // Ajouter des informations supplémentaires de l'API
+                $details['description'] = $volumeInfo['description'] ?? null;
+                $details['searchInfo'] = $results['items'][0]['searchInfo']['textSnippet'] ?? null;
+                $details['pageCount'] = $volumeInfo['pageCount'] ?? null;
+                $details['categories'] = $volumeInfo['categories'] ?? [];
+                $details['imageLinks'] = $volumeInfo['imageLinks'] ?? [];
+            }
+            
+            return $this->json($details);
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'Erreur lors de la récupération des détails'], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 }
