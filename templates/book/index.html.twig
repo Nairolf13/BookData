@@ -160,24 +160,48 @@
             icon.classList.toggle('rotate-180');
         }
 
-        function openEditModal(bookId) {
+        async function openEditModal(bookId) {
             const modal = document.getElementById('editModal');
             const form = document.getElementById('editForm');
             
-            // Clone the add form and modify it for editing
-            const addForm = document.querySelector('#bookForm form').cloneNode(true);
-            addForm.action = `/book/${bookId}/edit`;
-            addForm.method = 'POST';
-            
-            // Update the submit button
-            const submitBtn = addForm.querySelector('button[type="submit"]');
-            submitBtn.textContent = 'Enregistrer les modifications';
-            
-            // Clear the existing form and add the new one
-            form.innerHTML = '';
-            form.appendChild(addForm);
-            
-            modal.classList.remove('hidden');
+            try {
+                // Récupérer les données du livre
+                const response = await fetch(`/book/${bookId}/get`);
+                const bookData = await response.json();
+                
+                // Clone the add form and modify it for editing
+                const addForm = document.querySelector('#bookForm form').cloneNode(true);
+                addForm.action = `/book/${bookId}/edit`;
+                addForm.method = 'POST';
+                addForm.enctype = 'multipart/form-data';
+                
+                // Pre-fill form fields
+                addForm.querySelector('[name="book[title]"]').value = bookData.title;
+                addForm.querySelector('[name="book[author]"]').value = bookData.author;
+                addForm.querySelector('[name="book[publicationDate]"]').value = bookData.publicationDate;
+                addForm.querySelector('[name="book[ISBN]"]').value = bookData.ISBN;
+                addForm.querySelector('[name="book[buyBy]"]').value = bookData.buyBy;
+                
+                // Reset file input as we can't pre-fill it for security reasons
+                const fileInput = addForm.querySelector('input[type="file"]');
+                if (fileInput) {
+                    fileInput.value = '';
+                }
+                
+                // Update the submit button
+                const submitBtn = addForm.querySelector('button[type="submit"]');
+                submitBtn.textContent = 'Enregistrer les modifications';
+                submitBtn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+                submitBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+                
+                // Clear the existing form and add the new one
+                form.innerHTML = '';
+                form.appendChild(addForm);
+                
+                modal.classList.remove('hidden');
+            } catch (error) {
+                console.error('Erreur lors de la récupération des données du livre:', error);
+            }
         }
 
         function closeEditModal() {

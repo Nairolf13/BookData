@@ -8,6 +8,7 @@ use App\Repository\BookRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\String\Slugger\SluggerInterface;
@@ -56,10 +57,23 @@ final class BookController extends AbstractController
         ]);
     }
 
+    #[Route('/{id}/get', name: 'app_book_get', methods: ['GET'])]
+    public function getBook(Book $book): JsonResponse
+    {
+        return $this->json([
+            'title' => $book->getTitle(),
+            'author' => $book->getAuthor(),
+            'publicationDate' => $book->getPublicationDate()->format('Y-m-d'),
+            'ISBN' => $book->getISBN(),
+            'buyBy' => $book->getBuyBy(),
+        ]);
+    }
+
     #[Route('/{id}/edit', name: 'app_book_edit', methods: ['POST'])]
     public function edit(Request $request, Book $book, EntityManagerInterface $entityManager, SluggerInterface $slugger): Response
     {
         $form = $this->createForm(BookType::class, $book);
+        $oldPhotoFileName = $book->getPhotoFileName();
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
@@ -72,8 +86,8 @@ final class BookController extends AbstractController
 
                 try {
                     // Supprimer l'ancienne photo si elle existe
-                    if ($book->getPhotoFileName()) {
-                        $oldPhotoPath = $this->getParameter('photo_dir') . '/' . $book->getPhotoFileName();
+                    if ($oldPhotoFileName) {
+                        $oldPhotoPath = $this->getParameter('photo_dir') . '/' . $oldPhotoFileName;
                         if (file_exists($oldPhotoPath)) {
                             unlink($oldPhotoPath);
                         }
@@ -88,6 +102,9 @@ final class BookController extends AbstractController
                     $this->addFlash('error', 'Une erreur est survenue lors du téléchargement de l\'image');
                     return $this->redirectToRoute('app_book_index');
                 }
+            } else {
+                // Si aucun nouveau fichier n'est uploadé, on garde l'ancien
+                $book->setPhotoFileName($oldPhotoFileName);
             }
 
             $entityManager->flush();
