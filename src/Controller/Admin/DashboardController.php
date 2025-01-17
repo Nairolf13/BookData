@@ -2,13 +2,14 @@
 
 namespace App\Controller\Admin;
 
-use EasyCorp\Bundle\EasyAdminBundle\Config\Dashboard;
-use EasyCorp\Bundle\EasyAdminBundle\Config\MenuItem;
-use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractDashboardController;
-use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
+use App\Entity\Book;
+use App\Entity\Admin;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
-use App\Entity\Book;
+use EasyCorp\Bundle\EasyAdminBundle\Config\MenuItem;
+use EasyCorp\Bundle\EasyAdminBundle\Config\Dashboard;
+use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
+use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractDashboardController;
 
 class DashboardController extends AbstractDashboardController
 {
@@ -31,5 +32,6 @@ class DashboardController extends AbstractDashboardController
     {
         yield MenuItem::linktoRoute('Back to the website', 'fas fa-home', 'homepage');
         yield MenuItem::linkToCrud('Book', 'fas fa-list', Book::class);
+        yield MenuItem::linkToCrud('Admin', 'fas fa-user', Admin::class);
     }
 }

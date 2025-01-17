@@ -52,7 +52,7 @@ class Book implements \Stringable
 
     public function __toString(): string
     {
-        return $this->author.' '.$this->title.' '.$this->ISBN; ' '.$this->buyBy;' '.$this->photoFileName;
+        return $this->author.' '; 
     }
 
     public function getTitle(): ?string

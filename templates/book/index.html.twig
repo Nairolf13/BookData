@@ -1,20 +1,195 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Hello BookController!{% endblock %}
+{% block title %}Ma Collection de Livres{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+{% endblock %}
 
 {% block body %}
-<style>
-    .example-wrapper { margin: 1em auto; max-width: 800px; width: 95%; font: 18px/1.5 sans-serif; }
-    .example-wrapper code { background: #F5F5F5; padding: 2px 6px; }
-</style>
+    <!-- Navigation -->
+    <nav class="bg-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <h1 class="text-2xl font-bold text-gray-800">Ma Collection</h1>
+                </div>
+            </div>
+        </div>
+    </nav>
 
-<div class="example-wrapper">
-    <h1>Hello {{ controller_name }}! ✅</h1>
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <!-- Flash Messages -->
+        {% for message in app.flashes('success') %}
+            <div class="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded">
+                {{ message }}
+            </div>
+        {% endfor %}
 
-    This friendly message is coming from:
-    <ul>
-        <li>Your controller at <code>/home/florian/ri7/CDA/BookData/src/Controller/BookController.php</code></li>
-        <li>Your template at <code>/home/florian/ri7/CDA/BookData/templates/book/index.html.twig</code></li>
-    </ul>
-</div>
+        <!-- Book Grid -->
+        <div class="bg-white">
+            <div class="mx-auto py-8">
+                <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {% for book in books %}
+                        <div class="bg-white rounded-lg shadow-lg overflow-hidden flex flex-col h-[32rem]">
+                            {% if book.photoFileName %}
+                                <img class="h-64 w-full object-cover flex-shrink-0" src="{{ asset('uploads/photos/' ~ book.photoFileName) }}" alt="{{ book.title }}">
+                            {% else %}
+                                <div class="h-64 w-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+                                    <svg class="h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                                    </svg>
+                                </div>
+                            {% endif %}
+                            <div class="p-6 flex-1 flex flex-col">
+                                <div class="flex-1">
+                                    <h2 class="text-xl font-semibold text-gray-900 line-clamp-2 h-14">{{ book.title }}</h2>
+                                    <div class="space-y-1 mt-4">
+                                        <p class="text-gray-600">par {{ book.author }}</p>
+                                        <p class="text-sm text-gray-500">Publié le: {{ book.publicationDate|date('Y-m-d') }}</p>
+                                        <p class="text-sm text-gray-500">ISBN: {{ book.ISBN }}</p>
+                                        <p class="text-sm text-gray-500">Ajouté par: {{ book.buyBy }}</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-4 flex justify-end space-x-2">
+                                    <button onclick="openEditModal({{ book.id }})" class="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-md hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                        <i class="fas fa-edit"></i> Modifier
+                                    </button>
+                                    <form action="{{ path('app_book_delete', {'id': book.id}) }}" method="post" class="inline" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce livre ?');">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ book.id) }}">
+                                        <button type="submit" class="px-3 py-1 bg-red-100 text-red-700 rounded-md hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-red-500">
+                                            <i class="fas fa-trash"></i> Supprimer
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <p class="text-gray-500 text-center col-span-full">Aucun livre dans la collection.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Book Form Section -->
+        <div class="mt-8 bg-white rounded-lg shadow-lg overflow-hidden">
+            <div class="p-6">
+                <div class="flex justify-between items-center cursor-pointer" onclick="toggleForm()">
+                    <h2 class="text-2xl font-bold text-gray-900">Ajouter un Livre</h2>
+                    <i class="fas fa-chevron-down text-gray-500 transition-transform duration-200"></i>
+                </div>
+                <div id="bookForm" class="hidden mt-6">
+                    {{ form_start(form, {'attr': {'class': 'space-y-6', 'enctype': 'multipart/form-data'}}) }}
+                        <div class="space-y-4">
+                            <div>
+                                {{ form_label(form.title, 'Titre', {'label_attr': {'class': 'block text-sm font-medium text-gray-700'}}) }}
+                                {{ form_widget(form.title, {'attr': {'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500'}}) }}
+                                {{ form_errors(form.title, {'attr': {'class': 'mt-1 text-sm text-red-600'}}) }}
+                            </div>
+
+                            <div>
+                                {{ form_label(form.author, 'Auteur', {'label_attr': {'class': 'block text-sm font-medium text-gray-700'}}) }}
+                                {{ form_widget(form.author, {'attr': {'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500'}}) }}
+                                {{ form_errors(form.author, {'attr': {'class': 'mt-1 text-sm text-red-600'}}) }}
+                            </div>
+
+                            <div>
+                                {{ form_label(form.publicationDate, 'Date de Publication', {'label_attr': {'class': 'block text-sm font-medium text-gray-700'}}) }}
+                                {{ form_widget(form.publicationDate, {'attr': {'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500'}}) }}
+                                {{ form_errors(form.publicationDate, {'attr': {'class': 'mt-1 text-sm text-red-600'}}) }}
+                            </div>
+
+                            <div>
+                                {{ form_label(form.ISBN, 'ISBN', {'label_attr': {'class': 'block text-sm font-medium text-gray-700'}}) }}
+                                {{ form_widget(form.ISBN, {'attr': {'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500'}}) }}
+                                {{ form_errors(form.ISBN, {'attr': {'class': 'mt-1 text-sm text-red-600'}}) }}
+                            </div>
+
+                            <div>
+                                {{ form_label(form.buyBy, 'Acheté par', {'label_attr': {'class': 'block text-sm font-medium text-gray-700'}}) }}
+                                {{ form_widget(form.buyBy, {'attr': {'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500'}}) }}
+                                {{ form_errors(form.buyBy, {'attr': {'class': 'mt-1 text-sm text-red-600'}}) }}
+                            </div>
+
+                            <div>
+                                {{ form_label(form.photoFileName, 'Photo de Couverture', {'label_attr': {'class': 'block text-sm font-medium text-gray-700'}}) }}
+                                {{ form_widget(form.photoFileName, {'attr': {'class': 'mt-1 block w-full text-sm text-gray-500
+                                    file:mr-4 file:py-2 file:px-4
+                                    file:rounded-md file:border-0
+                                    file:text-sm file:font-semibold
+                                    file:bg-indigo-50 file:text-indigo-700
+                                    hover:file:bg-indigo-100'}}) }}
+                                {{ form_errors(form.photoFileName, {'attr': {'class': 'mt-1 text-sm text-red-600'}}) }}
+                            </div>
+                        </div>
+
+                        <div class="mt-6">
+                            <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                Ajouter le Livre
+                            </button>
+                        </div>
+                    {{ form_end(form) }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="editModal" class="hidden fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center">
+        <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-medium text-gray-900">Modifier le Livre</h3>
+                <button onclick="closeEditModal()" class="text-gray-400 hover:text-gray-500">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="editForm" method="post" class="space-y-4" enctype="multipart/form-data">
+                <!-- Form fields will be dynamically populated -->
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function toggleForm() {
+            const formContent = document.getElementById('bookForm');
+            const icon = document.querySelector('.fa-chevron-down');
+            formContent.classList.toggle('hidden');
+            icon.classList.toggle('rotate-180');
+        }
+
+        function openEditModal(bookId) {
+            const modal = document.getElementById('editModal');
+            const form = document.getElementById('editForm');
+            
+            // Clone the add form and modify it for editing
+            const addForm = document.querySelector('#bookForm form').cloneNode(true);
+            addForm.action = `/book/${bookId}/edit`;
+            addForm.method = 'POST';
+            
+            // Update the submit button
+            const submitBtn = addForm.querySelector('button[type="submit"]');
+            submitBtn.textContent = 'Enregistrer les modifications';
+            
+            // Clear the existing form and add the new one
+            form.innerHTML = '';
+            form.appendChild(addForm);
+            
+            modal.classList.remove('hidden');
+        }
+
+        function closeEditModal() {
+            const modal = document.getElementById('editModal');
+            modal.classList.add('hidden');
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('editModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeEditModal();
+            }
+        });
+    </script>
 {% endblock %}

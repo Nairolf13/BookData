@@ -9,31 +9,50 @@ use Symfony\Component\Security\Core\User\UserInterface;
 
 #[ORM\Entity(repositoryClass: AdminRepository::class)]
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_EMAIL', fields: ['email'])]
-class Admin implements UserInterface, PasswordAuthenticatedUserInterface
+class Admin implements UserInterface, PasswordAuthenticatedUserInterface, \Stringable
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    private ?int $id = null;
+    protected ?int $id = null;
 
     #[ORM\Column(length: 180)]
-    private ?string $email = null;
+    protected ?string $username = null;
+
+    #[ORM\Column(length: 180)]
+    protected ?string $email = null;
 
     /**
      * @var list<string> The user roles
      */
     #[ORM\Column]
-    private array $roles = [];
+    protected array $roles = [];
 
     /**
      * @var string The hashed password
      */
     #[ORM\Column]
-    private ?string $password = null;
+    protected ?string $password = null;
+
+    public function __toString(): string
+        {
+            return $this->username;
+        }
 
     public function getId(): ?int
     {
         return $this->id;
+    }
+
+    public function getUsername(): ?string
+    {
+        return $this->username;
+    }
+
+    public function setUsername(string $username): static
+    {
+        $this->username = $username;
+        return $this;
     }
 
     public function getEmail(): ?string
@@ -44,7 +63,6 @@ class Admin implements UserInterface, PasswordAuthenticatedUserInterface
     public function setEmail(string $email): static
     {
         $this->email = $email;
-
         return $this;
     }
 
