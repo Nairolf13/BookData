@@ -3,18 +3,15 @@
 namespace App\EntityListener;
 
 use App\Entity\Admin;
-use Symfony\Component\String\Slugger\SluggerInterface;
 use Doctrine\Bundle\DoctrineBundle\Attribute\AsEntityListener;
 use Doctrine\ORM\Events;
+use Doctrine\Persistence\Event\LifecycleEventArgs;
 
 #[AsEntityListener(event: Events::prePersist, entity: Admin::class)]
-#[AsEntityListener(event: Events::preUpdate, entity: Admin::class)]
 class AdminEntityListener
 {
-
-    public function __invoke(Admin $admin) : void
+    public function prePersist(Admin $admin, LifecycleEventArgs $event): void
     {
-       [$username,] = explode('@', $admin->getEmail());
-       $admin->setUsername($username);
+        $admin->setRoles(['ROLE_USER']);
     }
 }
