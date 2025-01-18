@@ -152,34 +152,10 @@ final class BookController extends AbstractController
             if (!empty($results['items'])) {
                 $book = $results['items'][0]['volumeInfo'];
                 
-                // Formater la date de publication
-                $publicationDate = null;
-                if (isset($book['publishedDate'])) {
-                    try {
-                        // Essayer de parser différents formats de date
-                        $dateFormats = [
-                            'Y-m-d', 
-                            'Y-m', 
-                            'Y'
-                        ];
-                        
-                        foreach ($dateFormats as $format) {
-                            $parsedDate = \DateTime::createFromFormat($format, $book['publishedDate']);
-                            if ($parsedDate) {
-                                $publicationDate = $parsedDate->format('Y-m-d');
-                                break;
-                            }
-                        }
-                    } catch (\Exception $e) {
-                        // En cas d'erreur, utiliser l'année si possible
-                        $publicationDate = substr($book['publishedDate'], 0, 4) . '-01-01';
-                    }
-                }
-                
                 return $this->json([
                     'title' => $book['title'] ?? '',
                     'author' => $book['authors'][0] ?? '',
-                    'publicationDate' => $publicationDate ?? '',
+                    'publicationDate' => $book['publishedDate'] ?? '',
                     'ISBN' => $book['industryIdentifiers'][0]['identifier'] ?? '',
                     'searchInfo' => $results['items'][0]['searchInfo']['textSnippet'] ?? null
                 ]);

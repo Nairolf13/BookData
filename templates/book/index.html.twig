@@ -299,7 +299,7 @@
                             }
                         }
                     })
-                    .catch(error => {});
+                    .catch(error => console.error('Erreur:', error));
             }
 
             const debouncedSearchBookInfo = debounce(searchBookInfo);
@@ -455,7 +455,7 @@
                             }
                         }
                     })
-                    .catch(error => {});
+                    .catch(error => console.error('Erreur:', error));
             }
 
             const debouncedSearchBookInfo = debounce(searchBookInfo);
